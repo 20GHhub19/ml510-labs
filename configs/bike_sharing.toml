@@ -1,0 +1,15 @@
+# Shared data and execution settings. Modeling choices live in notebook cells.
+# Dates are source-local hourly labels; cutoffs are exclusive upper bounds.
+[experiment]
+seed = 42
+
+[data]
+path = "data/raw/bike_sharing/hour.csv"
+
+[split]
+train_end = "2012-04-01 00:00:00"
+validation_end = "2012-07-01 00:00:00"
+
+[runtime]
+cpu_only = true
+deterministic = true
