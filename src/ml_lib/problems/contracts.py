@@ -16,8 +16,8 @@ class PredictionContract:
     action: str
 
     def __post_init__(self):
-        if self.task not in {"regression", "forecasting"}:
-            raise ValueError("This release implements regression and numerical forecasting only.")
+        if self.task not in {"regression", "forecasting", "classification"}:
+            raise ValueError("Choose regression, forecasting or classification.")
 
     def to_dict(self) -> dict:
         return asdict(self)

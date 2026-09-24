@@ -10,7 +10,7 @@ from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor, HistGradientBoostingRegressor
 from sklearn.pipeline import Pipeline
-from ml_lib.features.preprocessing import PreprocessingConfig, make_preprocessor
+from ml_lib.features.preprocessing import PreprocessingConfig, make_preprocessor, check_tabular_inputs
 from ml_lib.models.interfaces import ModelSpec
 from ml_lib.problems.regression import FeatureSchema
 from ml_lib.data.validation import finite_array
@@ -38,9 +38,7 @@ class TabularRegressor:
         self.is_fitted = False
 
     def fit(self, X: pd.DataFrame, y) -> "TabularRegressor":
-        self.schema.validate(X)
-        if self.preprocessing.missing_values == "error" and X[self.schema.columns].isna().any().any():
-            raise ValueError("Missing selected inputs; investigate or explicitly choose imputation.")
+        check_tabular_inputs(X, self.schema, self.preprocessing, training=True)
         values = finite_array(y, name="training labels")
         if values.ndim != 1 or len(values) != len(X):
             raise ValueError("Expected one scalar label per row.")
@@ -53,9 +51,7 @@ class TabularRegressor:
     def predict(self, X: pd.DataFrame) -> np.ndarray:
         if not self.is_fitted:
             raise RuntimeError("Fit on training data before prediction.")
-        self.schema.validate(X)
-        if self.preprocessing.missing_values == "error" and X[self.schema.columns].isna().any().any():
-            raise ValueError("Missing selected inputs; investigate or explicitly choose imputation.")
+        check_tabular_inputs(X, self.schema, self.preprocessing)
         # Raw predictions are retained. Negative predictions are diagnosed, not silently clipped.
         return np.asarray(self.pipeline.predict(X), dtype=float)
 

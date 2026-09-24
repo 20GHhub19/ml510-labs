@@ -8,11 +8,23 @@ def select_model(validation_table, metric: str = "mae") -> dict:
     Accepts a pandas DataFrame (or a mapping of metric to model-score mappings).
     Every candidate must have a finite score for the selected metric.
     """
-    directions = {"mae": "minimize", "rmse": "minimize", "wape": "minimize", "r2": "maximize"}
+    directions = {"mae": "minimize", "rmse": "minimize", "wape": "minimize", "r2": "maximize",
+                  "average_precision": "maximize", "roc_auc": "maximize", "recall_at_fpr": "maximize",
+                  "log_loss": "minimize", "brier": "minimize"}
     if metric not in directions:
-        raise ValueError(f"Unsupported selection metric {metric!r}. Choose mae, rmse, wape, or r2.")
+        raise ValueError(f"Unsupported selection metric {metric!r}. Choose {list(directions)}.")
     if metric not in validation_table:
         raise ValueError(f"Validation scores do not include {metric!r}.")
+    constraint = None
+    if metric == "recall_at_fpr":
+        if "max_false_positive_rate" not in validation_table:
+            raise ValueError("recall_at_fpr requires a shared max_false_positive_rate column.")
+        column = validation_table["max_false_positive_rate"]
+        limits = list(column.values()) if isinstance(column, dict) else list(column)
+        invalid = any(not isinstance(x, (int, float)) or not math.isfinite(x) or not 0 <= x <= 1 for x in limits)
+        if not limits or invalid or len(set(limits)) != 1:
+            raise ValueError("recall_at_fpr comparisons require the same finite false-positive-rate limit.")
+        constraint = float(limits[0])
     candidates = list(validation_table[metric].items())
     if not candidates:
         raise ValueError("No validation candidates to select.")
@@ -27,5 +39,8 @@ def select_model(validation_table, metric: str = "mae") -> dict:
         scores.append((name, value))
     choose = min if directions[metric] == "minimize" else max
     name, score = choose(scores, key=lambda candidate: candidate[1])
-    return {"selected_model": name, "metric": metric, "direction": directions[metric],
-            "validation_score": score, "rule": f"{directions[metric]} validation {metric}"}
+    result = {"selected_model": name, "metric": metric, "direction": directions[metric],
+              "validation_score": score, "rule": f"{directions[metric]} validation {metric}"}
+    if constraint is not None:
+        result["max_false_positive_rate"] = constraint
+    return result

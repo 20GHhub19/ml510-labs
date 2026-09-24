@@ -1,11 +1,31 @@
 """Explicit preprocessing choices, fitted inside the training pipeline."""
 from dataclasses import dataclass
 from typing import Literal
+import numpy as np
+import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from ml_lib.problems.regression import FeatureSchema
+from ml_lib.features.schema import FeatureSchema
+
+
+def check_tabular_inputs(X, schema, config, *, training=False):
+    """Check selected inputs before fitting or applying preparation."""
+    if not isinstance(X, pd.DataFrame) or X.empty:
+        raise ValueError("Expected a nonempty input DataFrame.")
+    schema.validate(X)
+    selected = X[schema.columns]
+    if config.missing_values == "error" and selected.isna().any().any():
+        raise ValueError("Missing selected inputs; investigate or explicitly choose imputation.")
+    if schema.numeric:
+        numeric = selected[list(schema.numeric)].to_numpy(dtype=float, na_value=np.nan)
+        if np.isinf(numeric).any():
+            raise ValueError("Numeric inputs may be missing, but not infinite.")
+    if training:
+        empty_columns = selected.columns[selected.isna().all()].tolist()
+        if empty_columns:
+            raise ValueError(f"Training inputs have no observed values in: {empty_columns}.")
 
 
 @dataclass(frozen=True)

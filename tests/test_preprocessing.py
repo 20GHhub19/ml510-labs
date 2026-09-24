@@ -6,6 +6,7 @@ from ml_lib.features.preprocessing import PreprocessingConfig
 from ml_lib.models.classical import build_regressor
 from ml_lib.models.interfaces import ModelSpec
 from ml_lib.problems.regression import FeatureSchema
+from ml_lib.models.classification import ClassifierSpec, build_classifier
 
 
 class PreprocessingTests(unittest.TestCase):
@@ -35,3 +36,26 @@ class PreprocessingTests(unittest.TestCase):
 
     def test_invalid_policy_rejected(self):
         with self.assertRaises(ValueError): PreprocessingConfig(scale_numeric=True, missing_values="auto")
+
+    def test_shared_input_checks(self):
+        schema = FeatureSchema(numeric=("x",))
+        for missing in ("impute", "error"):
+            prep = PreprocessingConfig(True, missing)
+            models = [build_regressor(ModelSpec("linear"), schema, preprocessing=prep),
+                      build_classifier(ClassifierSpec("logistic", {"C": 1.}), schema, preprocessing=prep)]
+            invalid = [pd.DataFrame({"x": []}), pd.DataFrame({"wrong": [1., 2.]}),
+                       pd.DataFrame({"x": [np.inf, 2.]}), pd.DataFrame({"x": [np.nan, np.nan]})]
+            if missing == "error":
+                invalid.append(pd.DataFrame({"x": [np.nan, 2.]}))
+            for frame in invalid:
+                messages = []
+                for model in models:
+                    with self.assertRaises(ValueError) as error:
+                        model.fit(frame, [0, 1])
+                    messages.append(str(error.exception))
+                self.assertEqual(messages[0], messages[1])
+            for model in models:
+                model.fit(pd.DataFrame({"x": [1., 2.]}), [0, 1])
+                predict = getattr(model, "predict_proba", model.predict)
+                with self.assertRaisesRegex(ValueError, "not infinite"):
+                    predict(pd.DataFrame({"x": [np.inf]}))
