@@ -1,0 +1,15 @@
+[experiment]
+seed = 42
+
+[data]
+path = "data/raw/bank_account_fraud/Base.csv"
+
+[split]
+train = [0, 1, 2, 3]
+calibration = [4]
+validation = [5]
+test = [6, 7]
+
+[runtime]
+cpu_only = true
+deterministic = true
