@@ -9,8 +9,9 @@ Practical labs for learning to frame business problems, prepare data, build mode
 | Lab | Focus | Start here |
 |---|---|---|
 | S4 — Regression and forecasting | Contextual estimation, model comparison, and forecasting from history | [Setup and lab guide](docs/s4_regression.md) |
+| S5 — Classification and review decisions | Fraud detection under an error constraint, model comparison, calibration, and review workload | [Setup and lab guide](docs/s5_classification.md) |
 
-S4 is the first available lab. Its notebook assignments are provided through the course Moodle, not GitHub. Download the `s4_regression` folder, extract it if zipped, and copy it into `notebooks/`. See the [notebook placement instructions](notebooks/README.md), then follow the S4 guide for installation and data preparation.
+Notebook assignments are provided through the course Moodle, not GitHub. Download the lab folder (`s4_regression` or `s5_classification`), extract it if zipped, and copy it into `notebooks/`. See the [notebook placement instructions](notebooks/README.md), then follow the relevant guide for installation and data preparation.
 
 ## Repository map
 
@@ -45,4 +46,4 @@ Tests maintain the shared library. Review notebook and lab-helper changes by run
 
 Copyright (c) 2026 Houssem Ben Braiek. Original code, notebooks, and course materials in this repository are available under the [MIT License](LICENSE).
 
-Third-party materials retain their own licenses. The UCI Bike Sharing dataset is licensed separately under CC BY 4.0; see the [dataset attribution](docs/s4_regression.md#2-obtain-and-verify-the-data).
+Third-party materials retain their own licenses. See the separate attribution and licenses for [Bike Sharing](docs/s4_regression.md#2-obtain-and-verify-the-data) and [BAF Base](docs/s5_classification.md#2-obtain-and-verify-baf-base).

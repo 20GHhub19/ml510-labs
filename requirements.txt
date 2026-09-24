@@ -1,5 +1,5 @@
 # Install from the repository root: python -m pip install -r requirements.txt
-# Shared environment for all six notebooks; CPU execution is the default.
+# Shared environment for all labs; CPU execution is the default.
 # Direct package pins, not a complete transitive lockfile.
 numpy==2.2.6
 scipy==1.15.3

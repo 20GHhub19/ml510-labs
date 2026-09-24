@@ -10,6 +10,8 @@ dist/
 .env
 data/raw/bike_sharing/*
 !data/raw/bike_sharing/README.md
+data/raw/bank_account_fraud/*
+!data/raw/bank_account_fraud/README.md
 data/processed/*
 !data/processed/README.md
 artifacts/*
