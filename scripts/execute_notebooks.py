@@ -10,9 +10,9 @@ from nbclient import NotebookClient
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--lab", choices=["s4", "s5"], default="s4")
+    parser.add_argument("--lab", choices=["s4", "s5", "s6"], default="s4")
     parser.add_argument("--scope", choices=["core", "all"], default=None,
-                        help="S4 defaults to core (00-03); S5 runs all six stages.")
+                        help="S4 defaults to core (00-03); S5 and S6 run all six stages.")
     parser.add_argument("--kernel", default="ml510")
     parser.add_argument("--timeout", type=int, default=None,
                         help="Per-cell timeout in seconds (default: S4 7200; S5 43200 for full-data CPU training).")
@@ -28,14 +28,17 @@ def main():
         "05_model_capacity.ipynb",
     ]
     scope = args.scope or ("core" if args.lab == "s4" else "all")
-    if args.lab == "s5":
+    if args.lab in {"s5", "s6"}:
         if scope != "all":
-            parser.error("S5 runs all six stages; use --lab s5 --scope all.")
+            parser.error("S5 and S6 run all six stages; use --scope all.")
         names = ["00_start_here.ipynb", "01_logistic_regression.ipynb", "02_trees_and_ensembles.ipynb",
                  "03_neural_models.ipynb", "04_probabilities.ipynb", "05_review_policy.ipynb"]
+        if args.lab == "s6":
+            names = ["00_start_here.ipynb", "01_operating_regimes.ipynb", "02_challenge_groups.ipynb",
+                     "03_anomaly_references.ipynb", "04_autoencoder.ipynb", "05_temporal_autoencoder.ipynb"]
     elif scope == "core":
         names = names[:4]
-    folder = "s4_regression" if args.lab == "s4" else "s5_classification"
+    folder = {"s4": "s4_regression", "s5": "s5_classification", "s6": "s6_unsupervised"}[args.lab]
     files = [root / "notebooks" / folder / name for name in names]
     missing = [path.name for path in files if not path.is_file()]
     if missing:
@@ -63,9 +66,12 @@ def main():
         book = nbformat.read(path, as_version=4)
         environment = dict(os.environ)
         environment.pop("ML510_S5_SOURCE_RUN", None)
-        if args.lab == "s5":
-            if phase >= 3:
-                environment["ML510_S5_SOURCE_RUN"] = previous_run
+        environment.pop("ML510_S6_SOURCE_RUN", None)
+        handoff_start = 3 if args.lab == "s5" else 4
+        handoff_variable = f"ML510_{args.lab.upper()}_SOURCE_RUN"
+        if args.lab in {"s5", "s6"}:
+            if phase >= handoff_start:
+                environment[handoff_variable] = previous_run
             # Read the run created by this kernel, never a directory named "latest".
             book.cells.append(nbformat.v4.new_code_cell("import json\nprint(json.dumps(str(run.directory)))"))
         started = perf_counter()
@@ -74,13 +80,13 @@ def main():
         client = NotebookClient(book, kernel_name=args.kernel, timeout=timeout,
                                 resources={"metadata": {"path": str(root)}}, on_cell_executed=checkpoint)
         client.execute(env=environment)
-        if args.lab == "s5":
+        if args.lab in {"s5", "s6"}:
             capture = book.cells.pop()
             text = "".join(o.get("text", "") for o in capture.outputs if o.output_type == "stream").strip()
             previous_run = json.loads(text)
             book.metadata["artifact_run"] = str(Path(previous_run).relative_to(root).as_posix())
-            if phase >= 3:
-                book.metadata["source_run"] = environment["ML510_S5_SOURCE_RUN"]
+            if phase >= handoff_start:
+                book.metadata["source_run"] = environment[handoff_variable]
         book.metadata["execution_seconds"] = perf_counter() - started
         nbformat.write(book, out / path.name)
         print("Saved", out / path.name, "seconds:", round(book.metadata["execution_seconds"], 2), flush=True)
