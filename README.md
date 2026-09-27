@@ -10,8 +10,9 @@ Practical labs for learning to frame business problems, prepare data, build mode
 |---|---|---|
 | S4 — Regression and forecasting | Contextual estimation, model comparison, and forecasting from history | [Setup and lab guide](docs/s4_regression.md) |
 | S5 — Classification and review decisions | Fraud detection under an error constraint, model comparison, calibration, and review workload | [Setup and lab guide](docs/s5_classification.md) |
+| S6 — Unsupervised operating-pattern discovery | Compressor regimes, reconstruction, anomaly evidence, and maintenance inspection | [Setup and lab guide](docs/s6_unsupervised.md) |
 
-Notebook assignments are provided through the course Moodle, not GitHub. Download the lab folder (`s4_regression` or `s5_classification`), extract it if zipped, and copy it into `notebooks/`. See the [notebook placement instructions](notebooks/README.md), then follow the relevant guide for installation and data preparation.
+Notebook assignments are provided through the course Moodle, not GitHub. Download the lab folder (`s4_regression`, `s5_classification`, or `s6_unsupervised`), extract it if zipped, and copy it into `notebooks/`. See the [notebook placement instructions](notebooks/README.md), then follow the relevant guide for installation and data preparation.
 
 ## Repository map
 
@@ -46,4 +47,4 @@ Tests maintain the shared library. Review notebook and lab-helper changes by run
 
 Copyright (c) 2026 Houssem Ben Braiek. Original code, notebooks, and course materials in this repository are available under the [MIT License](LICENSE).
 
-Third-party materials retain their own licenses. See the separate attribution and licenses for [Bike Sharing](docs/s4_regression.md#2-obtain-and-verify-the-data) and [BAF Base](docs/s5_classification.md#2-obtain-and-verify-baf-base).
+Third-party materials retain their own licenses. See the separate attribution and licenses for [Bike Sharing](docs/s4_regression.md#2-obtain-and-verify-the-data), [BAF Base](docs/s5_classification.md#2-obtain-and-verify-baf-base), and [MetroPT-3](docs/s6_unsupervised.md#2-obtain-and-verify-metropt-3).
