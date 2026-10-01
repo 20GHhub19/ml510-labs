@@ -40,7 +40,7 @@ Obtain `s6_unsupervised` from Moodle, extract it if zipped, and copy it into `no
 python -m jupyterlab
 ```
 
-Run each notebook top to bottom in a fresh kernel. Close preceding kernels to release memory. Notebooks 00–03 prepare their own data. In 04 and 05, paste the `source_run = ...` assignment printed by the preceding notebook into the labelled input cell. The printed next-notebook link opens the next stage. Scripted execution supplies these paths automatically. Models, features, windows, partitions, and fingerprints are checked; no arbitrary latest run is loaded. Load only your own trusted models.
+Run each notebook top to bottom in a fresh kernel. Close preceding kernels to release memory. Notebooks 00–03 prepare their own data. Complete notebook 03 before 04, and 04 before 05. In 04 and 05, replace the empty `source_run = ""` assignment with the assignment printed by the preceding notebook; keep the path relative to the repository root. The printed next-notebook link opens the next stage. Scripted execution supplies these paths automatically. Models, features, windows, partitions, and fingerprints are checked; no arbitrary latest run is loaded. Load only your own trusted models.
 
 For command-line execution:
 
@@ -122,7 +122,7 @@ The final investigation includes a missed reported incident. Inspect its sensor 
 
 Neural recovery files live under `training/<model>/`: configuration, preparation, epoch history, best model, and status. Incomplete recovery files are not completed handoffs; there is no automatic resume. Rerunning setup creates a new run; repeated result cells overwrite their stable outputs.
 
-Private corrections retain the starting experiments and add marked instructor-only worked solutions. Public notebooks stay unexecuted; detailed validation evidence remains local.
+Private corrections retain the starting experiments and add marked instructor-only worked solutions. Student notebooks stay unexecuted; detailed validation evidence remains local.
 
 ## References
 
@@ -131,7 +131,3 @@ Private corrections retain the starting experiments and add marked instructor-on
 - [Scikit-learn clustering](https://scikit-learn.org/1.7/modules/clustering.html)
 - [Novelty and outlier detection](https://scikit-learn.org/1.7/modules/outlier_detection.html)
 - [PCA](https://scikit-learn.org/1.7/modules/generated/sklearn.decomposition.PCA.html)
-
-## Validation status
-
-The six starting notebooks and worked exercises have been executed on Windows CPU, including dense and GRU training. The shared-library suite and saved-model restoration checks pass. Historical 25-epoch runs remain available locally for comparison. The 100-epoch dense and GRU runs and the worked bottleneck exercise have been executed from scratch; saved best-model predictions and matching evaluation windows were verified. Source notebooks remain unexecuted for delivery. Browser workflow and other operating systems have not been validated; detailed results stay local.

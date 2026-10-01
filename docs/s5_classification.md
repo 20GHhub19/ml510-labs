@@ -140,11 +140,6 @@ Higher test recall with a higher actual FPR is a trade-off, not a clean ranking 
 
 The practical recommendation may differ from the validation-score winner. Review quality, delays, legitimate-customer friction and prevented losses require operational evidence. The existing test period has already been examined during lab development; refreshed experiments are not fresh confirmation. Further model or policy changes need new confirmatory evidence.
 
-## Instructor material and validation
-
-Private corrections contain executed starting cells plus marked **Instructor solution** cells with worked TODO code and measured answers. Extra experiments use separate variables and runs. Students' starting notebooks remain unexecuted.
-
-The full-data experiments and worked TODO fits were validated on Windows CPU. This teaching refinement reuses those fits and refreshes the analysis; it does not repeat full neural training. Shared-library tests cover input checks, probabilities, alignment, calibration, policy rules, saving/loading, and interruption checkpoints on tiny neural fixtures. Other operating systems and the browser workflow remain unchecked. Detailed evidence stays local.
 
 ## References
 
