@@ -1,4 +1,4 @@
-"""Verify a downloaded local course CSV and write a separate manifest."""
+"""Verify downloaded course data and write a separate manifest."""
 import argparse
 from datetime import datetime, timezone
 from pathlib import Path
@@ -10,10 +10,20 @@ from ml_lib.experiment.artifacts import write_json
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--lab", choices=["s4", "s5", "s6"], default="s4")
+    parser.add_argument("--lab", choices=["s4", "s5", "s6", "s8"], default="s4")
     parser.add_argument("--path", type=Path, help="Optional explicit local dataset path.")
     args = parser.parse_args()
     root = project_root()
+    if args.lab == "s8":
+        if args.path:
+            parser.error("S8 verifies its complete evidence folder; use scripts/prepare_s8.py.")
+        from lab_helpers.s8_assistant import verify_data
+        report = verify_data(root)
+        target = root / "data/processed/mtrag_manifest.json"
+        write_json(target, report)
+        print(json.dumps({key: report[key] for key in ["passages", "tasks", "conversations", "teaching_tasks"]}, indent=2))
+        print("Manifest:", target)
+        return
     if args.lab == "s6":
         from lab_helpers.s6_unsupervised.metropt3 import load_metropt3, data_audit as metropt3_audit, prepare_data
         config = load_config(root / "configs/metropt3.toml")

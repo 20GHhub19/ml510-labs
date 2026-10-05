@@ -10,7 +10,7 @@ from nbclient import NotebookClient
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--lab", choices=["s4", "s5", "s6", "s7"], default="s4")
+    parser.add_argument("--lab", choices=["s4", "s5", "s6", "s7", "s8"], default="s4")
     parser.add_argument("--scope", choices=["core", "all"], default=None,
                         help="S4 defaults to core (00-03); other sessions run all stages.")
     parser.add_argument("--kernel", default="ml510")
@@ -43,7 +43,14 @@ def main():
                  "03_behavior.ipynb", "04_decision.ipynb"]
     elif scope == "core":
         names = names[:4]
-    folder = {"s4": "s4_regression", "s5": "s5_classification", "s6": "s6_unsupervised", "s7": "s7_evaluation"}[args.lab]
+    if args.lab == "s8":
+        if scope != "all":
+            parser.error("S8 follows all six stages; use --scope all.")
+        names = ["00_start_here.ipynb", "01_chains.ipynb", "02_retrieval.ipynb",
+                 "03_conversation.ipynb", "04_tools.ipynb", "05_graphs.ipynb"]
+        if args.timeout is None:
+            timeout = 1800
+    folder = {"s4": "s4_regression", "s5": "s5_classification", "s6": "s6_unsupervised", "s7": "s7_evaluation", "s8": "s8_assistant"}[args.lab]
     files = [root / "notebooks" / folder / name for name in names]
     missing = [path.name for path in files if not path.is_file()]
     if missing:
