@@ -92,6 +92,10 @@ def import_index(embeddings, source, destination):
         if len(names) != len(set(names)) or 'manifest.json' not in names:
             raise ValueError('Invalid index archive: duplicate entries or missing manifest.')
         manifest = json.loads(archive.read('manifest.json'))
+        if (not isinstance(manifest, dict) or not isinstance(manifest.get('batches'), list)
+                or not manifest['batches'] or not isinstance(manifest.get('files'), dict)
+                or not isinstance(manifest.get('preparation'), dict)):
+            raise ValueError('Invalid index archive manifest.')
         expected = QdrantIndex(None, embeddings).configuration
         state = manifest.get('preparation', {})
         if (manifest.get('format') != 's8-qdrant-v1' or not state.get('complete')
@@ -100,7 +104,8 @@ def import_index(embeddings, source, destination):
         allowed = {'manifest.json', 'LICENSE.txt', 'provenance.json'}
         for number, batch in enumerate(manifest['batches']):
             prefix = f'batches/{number:06d}'
-            if batch['prefix'] != prefix or type(batch['count']) is not int or not 0 < batch['count'] <= 512:
+            if (not isinstance(batch, dict) or batch.get('prefix') != prefix
+                    or type(batch.get('count')) is not int or not 0 < batch['count'] <= 512):
                 raise ValueError('Invalid batch entry in index archive.')
             allowed.update([prefix + '.npy', prefix + '.json'])
         if set(names) != allowed or set(manifest['files']) != allowed - {'manifest.json'}:
@@ -127,11 +132,14 @@ def import_index(embeddings, source, destination):
                     records = json.loads(archive.read(prefix + '.json'))
                     if (vectors.dtype != np.dtype('<f4')
                             or vectors.shape != (batch['count'], expected['dimensions'])
-                            or len(records) != batch['count'] or not np.isfinite(vectors).all()
+                            or not isinstance(records, list) or len(records) != batch['count'] or not np.isfinite(vectors).all()
                             or (np.linalg.norm(vectors, axis=1) == 0).any()):
                         raise ValueError('Invalid vectors or records in index archive.')
                     points = []
                     for record, vector in zip(records, vectors):
+                        if (not isinstance(record, dict) or not isinstance(record.get('id'), str)
+                                or not isinstance(record.get('payload'), dict)):
+                            raise ValueError('Invalid point record in index archive.')
                         point_id = record['id']
                         if point_id in seen:
                             raise ValueError('Duplicate point IDs in index archive.')

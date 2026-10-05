@@ -7,37 +7,47 @@ from langchain_core.callbacks import BaseCallbackHandler
 from ai_lib.models import KEY_NAMES, api_error_guidance
 
 
+def redact_record(value):
+    """Exclude credential fields and configured API-key values from saved records."""
+    if isinstance(value, dict):
+        return {str(k): redact_record(v) for k, v in value.items()
+                if not any(word in str(k).lower() for word in ("api_key", "authorization", "secret", "password"))}
+    if isinstance(value, (list, tuple)):
+        return [redact_record(v) for v in value]
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        if isinstance(value, str):
+            for name in [*KEY_NAMES.values(), "TAVILY_API_KEY"]:
+                key = os.getenv(name)
+                if key:
+                    value = value.replace(key, "[REDACTED]")
+        return value
+    return f"<{type(value).__name__}>"
+
+
 class LocalTrace(BaseCallbackHandler):
-    def __init__(self, run):
+    raise_error = True
+    def __init__(self, run, *, case_id=None, configuration_id=None):
         self.run = run
+        self.case_id = case_id
+        self.configuration_id = configuration_id
         self.events = []
         self.started = {}
 
     def _safe(self, value):
-        if isinstance(value, dict):
-            return {str(k): self._safe(v) for k, v in value.items()
-                    if not any(word in str(k).lower() for word in ("api_key", "authorization", "secret", "password"))}
-        if isinstance(value, (list, tuple)):
-            return [self._safe(v) for v in value]
-        if isinstance(value, (str, int, float, bool)) or value is None:
-            if isinstance(value, str):
-                for name in [*KEY_NAMES.values(), "TAVILY_API_KEY"]:
-                    key = os.getenv(name)
-                    if key:
-                        value = value.replace(key, "[REDACTED]")
-            return value
-        return f"<{type(value).__name__}>"
+        return redact_record(value)
 
     def event(self, kind, **details):
         self.events.append({"kind": kind, "at_utc": datetime.now(timezone.utc).isoformat(),
-                            **self._safe(details)})
-        self.run.record("trace", {"execution": "live", "events": self.events})
+                            "case_id": self.case_id, "configuration_id": self.configuration_id,
+                            "execution": "live", **self._safe(details)})
+        self.run.record("trace", {"execution": "mixed" if any(e["execution"] != "live" for e in self.events) else "live", "events": self.events})
 
     @staticmethod
     def message(message):
         return {"type": message.type, "content": message.content,
                 "tool_calls": getattr(message, "tool_calls", []),
                 "tool_call_id": getattr(message, "tool_call_id", None),
+                "status": getattr(message, "status", None),
                 "usage": getattr(message, "usage_metadata", None),
                 "completion": {key: value for key, value in getattr(message, "response_metadata", {}).items()
                                if key in {"finish_reason", "stop_reason", "model_name", "model", "model_provider"}}}
@@ -55,6 +65,7 @@ class LocalTrace(BaseCallbackHandler):
         self.event("model_output", run_id=str(run_id), seconds=elapsed, responses=outputs)
 
     def on_llm_error(self, error, *, run_id, **kwargs):
+        self.started.pop(str(run_id), None)
         self.event("model_error", run_id=str(run_id), guidance=api_error_guidance(error))
 
     def on_tool_start(self, serialized, input_str, *, run_id, **kwargs):
@@ -68,4 +79,5 @@ class LocalTrace(BaseCallbackHandler):
         self.event("tool_output", run_id=str(run_id), seconds=elapsed, result=output)
 
     def on_tool_error(self, error, *, run_id, **kwargs):
+        self.started.pop(str(run_id), None)
         self.event("tool_error", run_id=str(run_id), guidance=api_error_guidance(error))

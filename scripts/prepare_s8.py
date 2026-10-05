@@ -36,7 +36,8 @@ def download(root):
                 while block := response.read(1024 * 1024):
                     output.write(block)
             temporary.replace(path)
-        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        with path.open("rb") as stream:
+            digest = hashlib.file_digest(stream, "sha256").hexdigest()
         prior = previous.get("files", {}).get(name)
         if prior and prior["sha256"] != digest:
             raise ValueError(f"Raw file changed: {path}. Restore it before proceeding.")
@@ -45,14 +46,26 @@ def download(root):
         members = [n for n in archive.namelist() if n.endswith(".jsonl")]
         if len(members) != 1:
             raise ValueError("Expected one corpus JSONL in the official archive.")
-        data = archive.read(members[0])
         target = folder / "cloud.jsonl"
-        if target.exists() and target.read_bytes() != data:
-            raise ValueError("Extracted Cloud corpus differs from its source archive.")
-        if not target.exists():
-            target.write_bytes(data)
-    records["cloud.jsonl"] = {"sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data)}
-    manifest_path.write_text(json.dumps({"revision": REVISION, "files": records}, indent=2), encoding="utf-8")
+        temporary = target.with_suffix(".part")
+        if target.exists():
+            with archive.open(members[0]) as stream:
+                source_hash = hashlib.file_digest(stream, "sha256").hexdigest()
+            with target.open("rb") as stream:
+                target_hash = hashlib.file_digest(stream, "sha256").hexdigest()
+            if source_hash != target_hash:
+                raise ValueError("Extracted Cloud corpus differs from its source archive.")
+        else:
+            with archive.open(members[0]) as source, temporary.open("wb") as output:
+                while block := source.read(1024 * 1024):
+                    output.write(block)
+            temporary.replace(target)
+        with target.open("rb") as stream:
+            digest = hashlib.file_digest(stream, "sha256").hexdigest()
+    records["cloud.jsonl"] = {"sha256": digest, "bytes": target.stat().st_size}
+    manifest_temp = manifest_path.with_suffix(".part")
+    manifest_temp.write_text(json.dumps({"revision": REVISION, "files": records}, indent=2), encoding="utf-8")
+    manifest_temp.replace(manifest_path)
     return folder
 
 

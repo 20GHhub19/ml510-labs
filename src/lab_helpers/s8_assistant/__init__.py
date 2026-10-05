@@ -100,7 +100,8 @@ def verify_data(root):
     folder = raw_directory(root)
     download = json.loads((folder / "download.json").read_text(encoding="utf-8"))
     for name, record in download["files"].items():
-        actual = hashlib.sha256((folder / name).read_bytes()).hexdigest()
+        with (folder / name).open("rb") as stream:
+            actual = hashlib.file_digest(stream, "sha256").hexdigest()
         if actual != record["sha256"]:
             raise ValueError(f"Raw dataset file changed: {name}")
     documents, tasks = load_documents(root), load_tasks(root)
@@ -130,7 +131,8 @@ def verify_data(root):
 
 
 def index_directory(root):
-    fingerprint = hashlib.sha256((raw_directory(root) / "cloud.jsonl").read_bytes()).hexdigest()[:12]
+    with (raw_directory(root) / "cloud.jsonl").open("rb") as stream:
+        fingerprint = hashlib.file_digest(stream, "sha256").hexdigest()[:12]
     return Path(root) / "data/processed/s8_indexes" / f"{fingerprint}-bm25-local-v3"
 
 
@@ -153,5 +155,25 @@ def finish_run(run, title, summary):
     from IPython.display import Markdown, display
     run.record("status", {"completed": True})
     overview = run.write_overview(title, summary, inspect_first=["tables/summary.csv", "answers.json", "trace.json"])
-    relative = __import__("os").path.relpath(overview, Path.cwd()).replace("\\", "/")
+    relative = "../../" + overview.relative_to(project_root()).as_posix()
     display(Markdown(f"[{title}: open saved results]({relative})"))
+
+
+def open_vector_index(root, embeddings):
+    """Open the prepared collection; the caller closes the returned client."""
+    from qdrant_client import QdrantClient
+    from ai_lib.vector_store import QdrantIndex
+    folder = index_directory(root) / "qdrant"
+    if not folder.exists():
+        raise FileNotFoundError("Import the Moodle index with scripts/s8_qdrant.py first.")
+    try:
+        client = QdrantClient(path=str(folder))
+    except RuntimeError as error:
+        raise RuntimeError("Close the notebook or process using this Qdrant folder, then rerun setup.") from error
+    try:
+        index = QdrantIndex(client, embeddings)
+        state = index.open()
+    except Exception:
+        client.close()
+        raise
+    return client, index, state

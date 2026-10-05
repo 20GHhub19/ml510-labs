@@ -41,6 +41,8 @@ class RetrievalIndex:
     """Search the full corpus lexically, then embed only the chosen candidates."""
 
     def __init__(self, documents, *, model_name=EMBEDDING_MODEL):
+        if model_name != EMBEDDING_MODEL:
+            raise ValueError(f"This index supports {EMBEDDING_MODEL}; use its matching prepared vectors.")
         self.documents = list(documents)
         ids = [d.metadata.get("passage_id") for d in self.documents]
         if not ids or any(not x for x in ids) or len(set(ids)) != len(ids):
@@ -70,17 +72,30 @@ class RetrievalIndex:
         settings = self.folder / "retrieval.json"
         if settings.exists() and json.loads(settings.read_text(encoding="utf-8")) != self.configuration:
             raise ValueError("Retrieval settings or corpus changed. Prepare a matching cache directory.")
-        settings.write_text(json.dumps(self.configuration, indent=2), encoding="utf-8")
+        self._write_json(settings, self.configuration)
         path = self.folder / "lexical.json"
         if path.exists():
-            saved = json.loads(path.read_text(encoding="utf-8"))
-            if saved["corpus_sha256"] != self.fingerprint:
+            try:
+                saved = json.loads(path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as error:
+                raise ValueError("Invalid lexical cache. Remove lexical.json and prepare it again.") from error
+            if not isinstance(saved, dict) or saved.get("corpus_sha256") != self.fingerprint:
                 raise ValueError("Lexical index belongs to a different corpus.")
-            tokens = saved["tokens"]
+            tokens = saved.get("tokens")
+            if (not isinstance(tokens, list) or len(tokens) != len(self.documents)
+                    or any(not isinstance(row, list) or any(not isinstance(t, str) for t in row)
+                           for row in tokens)):
+                raise ValueError("Invalid lexical cache. Remove lexical.json and prepare it again.")
         else:
             tokens = [tokenize(d.page_content) for d in self.documents]
-            path.write_text(json.dumps({"corpus_sha256": self.fingerprint, "tokens": tokens}), encoding="utf-8")
+            self._write_json(path, {"corpus_sha256": self.fingerprint, "tokens": tokens})
         self._bm25 = BM25Okapi(tokens)
+
+    @staticmethod
+    def _write_json(path, value):
+        temporary = path.with_suffix(".part")
+        temporary.write_text(json.dumps(value), encoding="utf-8")
+        temporary.replace(path)
 
     def prepare_model(self):
         """Download/load the small CPU model; do not embed the corpus."""
@@ -112,7 +127,10 @@ class RetrievalIndex:
         key = hashlib.sha256(text.encode("utf-8")).hexdigest()
         path = cache / f"{key}.npy"
         if path.exists():
-            vectors = np.load(path, allow_pickle=False)
+            try:
+                vectors = np.load(path, allow_pickle=False)
+            except (ValueError, OSError) as error:
+                raise ValueError(f"Invalid embedding cache: {path}. Remove this file and rerun.") from error
         else:
             if query:
                 pieces = [self.configuration["query_prefix"] + text]
@@ -123,8 +141,12 @@ class RetrievalIndex:
             with temporary.open("wb") as stream:
                 np.save(stream, vectors, allow_pickle=False)
             temporary.replace(path)
-        if vectors.ndim != 2 or vectors.shape[1] != 384 or not np.isfinite(vectors).all():
-            raise ValueError("Invalid cached local embeddings. Remove the affected cache file and rerun.")
+        expected_rows = 1 if query else len(token_window_spans(text, self._tokenizer))
+        if (vectors.shape != (expected_rows, self.configuration["dimensions"])
+                or not np.issubdtype(vectors.dtype, np.floating)
+                or not np.isfinite(vectors).all()
+                or not np.allclose(np.linalg.norm(vectors, axis=1), 1.0, atol=1e-4)):
+            raise ValueError(f"Invalid cached local embeddings: {path}. Remove this file and rerun.")
         return vectors
 
     def embed_query(self, query):

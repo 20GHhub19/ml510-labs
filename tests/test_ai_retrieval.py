@@ -114,3 +114,19 @@ class RetrievalTests(unittest.TestCase):
                 index.search("red", method="local", k=5, candidate_k=2)
             with self.assertRaisesRegex(ValueError, "nonempty query"):
                 index.search("")
+
+    def test_corrupt_vectors(self):
+        with TemporaryDirectory() as temp:
+            index = RetrievalIndex(documents())
+            index.build_lexical(temp)
+            fake_embedder(index)
+            index.embed_query("blue")
+            path = next((Path(temp)/"queries").glob("*.npy"))
+            for vectors in [np.zeros((1,384)), np.ones((1,384)), np.zeros((0,384)), np.ones((2,384))/np.sqrt(384)]:
+                np.save(path, vectors)
+                with self.assertRaisesRegex(ValueError,"cached local embeddings"):
+                    index.embed_query("blue")
+
+    def test_unsupported_embedding_model(self):
+        with self.assertRaisesRegex(ValueError,"supports"):
+            RetrievalIndex(documents(),model_name="other-model")

@@ -8,6 +8,11 @@ from dotenv import load_dotenv
 KEY_NAMES = {"gemini": "GOOGLE_API_KEY", "groq": "GROQ_API_KEY", "cohere": "COHERE_API_KEY"}
 
 
+class ExternalCallError(RuntimeError):
+    """An external service returned unusable evidence or an incomplete response."""
+
+
+
 @dataclass(frozen=True)
 class ModelSettings:
     provider: str
@@ -63,6 +68,10 @@ def build_chat_model(settings: ModelSettings):
 
 def api_error_guidance(error: Exception) -> str:
     """Explain a failed call without reproducing provider payloads or credentials."""
+    if isinstance(error, ExternalCallError):
+        return "The service returned unusable data. Inspect the failed stage and service availability before retrying."
+    if isinstance(error, (TimeoutError, ConnectionError)):
+        return "The request timed out or could not connect. Check network access before retrying."
     text = str(error).lower()
     if any(word in text for word in ("429", "quota", "rate limit", "resource_exhausted")):
         return "Provider quota reached. Check your account limits and retry later; no provider was substituted."

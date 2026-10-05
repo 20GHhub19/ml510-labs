@@ -102,7 +102,7 @@ python scripts/s8_qdrant.py export --output artifacts/s8_delivery/s8_qdrant.zip
 ```
 
 Share that ZIP through Moodle. It contains vectors, passage metadata, and source
-attribution?not notebooks, API keys, or model caches. Students still prepare the
+attribution, not notebooks, API keys, or model caches. Students still prepare the
 original dataset with the command above.
 
 The pinned archive contains **72,442 unique passage records**, including three
@@ -194,6 +194,13 @@ plus separately marked, runnable instructor solutions.
   prepare a matching cache directory.
 - **Slow first query:** local embeddings are calculated only for the BM25 candidates
   and cached. Inspect cold and repeated-query timing; neither needs cloud embeddings.
+
+
+A rewritten query is only a retrieval aid. The answer still addresses the original
+question and conversation. If search fails, fix that execution failure before
+interpreting the answer; a successful search with no evidence is a different outcome.
+Close the Qdrant connection using the final cleanup cell, or shut down the kernel
+before opening the same local collection elsewhere.
 
 ## References
 

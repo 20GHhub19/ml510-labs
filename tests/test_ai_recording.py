@@ -33,3 +33,17 @@ class RecordingTests(unittest.TestCase):
         self.assertEqual(events[1]["responses"][0]["tool_calls"][0]["id"], "call-1")
         self.assertEqual(events[-1]["result"]["tool_call_id"], "call-1")
         self.assertGreaterEqual(events[1]["seconds"], 0)
+
+    def test_failed_call_cleanup(self):
+        trace = LocalTrace(SimpleNamespace(record=lambda *args: None))
+        trace.started["model"] = 0
+        trace.started["tool"] = 0
+        trace.on_llm_error(TimeoutError(),run_id="model")
+        trace.on_tool_error(TimeoutError(),run_id="tool")
+        self.assertEqual(trace.started,{})
+
+    def test_recording_error_visible(self):
+        def broken(*args): raise OSError("disk unavailable")
+        trace = LocalTrace(SimpleNamespace(record=broken))
+        self.assertTrue(trace.raise_error)
+        with self.assertRaises(OSError): trace.event("test")
