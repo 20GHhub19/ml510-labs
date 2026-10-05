@@ -17,3 +17,4 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 ml_lib = ["py.typed"]
+ai_lib = ["py.typed"]

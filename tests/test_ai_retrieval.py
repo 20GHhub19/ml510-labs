@@ -1,0 +1,116 @@
+"""Synthetic retrieval checks never download models or call provider APIs."""
+from pathlib import Path
+from tempfile import TemporaryDirectory
+import unittest
+from unittest.mock import MagicMock, patch
+
+from langchain_core.documents import Document
+import numpy as np
+from tokenizers import Tokenizer
+from tokenizers.models import WordLevel
+from tokenizers.pre_tokenizers import Whitespace
+
+from ai_lib.retrieval import RetrievalIndex, token_windows
+
+
+def documents():
+    return [Document(page_content=text, metadata={"passage_id": name})
+            for name, text in [("a", "red cloud"), ("b", "blue sky"), ("c", "green field")]]
+
+
+def fake_embedder(index):
+    tokenizer = Tokenizer(WordLevel({"[UNK]": 0}, unk_token="[UNK]"))
+    tokenizer.pre_tokenizer = Whitespace()
+    index._tokenizer = tokenizer
+    index._embedder = MagicMock()
+    def embed(texts, **kwargs):
+        vectors = []
+        for text in texts:
+            vector = np.zeros(384, dtype=np.float32)
+            vector[1 if "blue" in text else 0] = 1.0
+            vectors.append(vector)
+        return iter(vectors)
+    index._embedder.embed.side_effect = embed
+
+
+class RetrievalTests(unittest.TestCase):
+    def test_lexical_roundtrip(self):
+        with TemporaryDirectory() as temp:
+            index = RetrievalIndex(documents())
+            index.build_lexical(temp)
+            self.assertEqual(index.search("blue")[0].metadata["passage_id"], "b")
+            restored = RetrievalIndex(documents())
+            restored.build_lexical(temp)
+            self.assertEqual(index.search("sky"), restored.search("sky"))
+            self.assertIsNone(index._embedder)
+
+    def test_local_cache(self):
+        with TemporaryDirectory() as temp:
+            index = RetrievalIndex(documents())
+            index.build_lexical(temp)
+            fake_embedder(index)
+            first = index.search("blue", method="local", k=2)
+            self.assertEqual(first[0].metadata["passage_id"], "b")
+            calls = index._embedder.embed.call_count
+            self.assertEqual(first, index.search("blue", method="local", k=2))
+            self.assertEqual(calls, index._embedder.embed.call_count)
+            restored = RetrievalIndex(documents())
+            restored.build_lexical(temp)
+            fake_embedder(restored)
+            self.assertEqual(first, restored.search("blue", method="local", k=2))
+            restored._embedder.embed.assert_not_called()
+
+    def test_candidate_boundary(self):
+        with TemporaryDirectory() as temp:
+            index = RetrievalIndex(documents())
+            index.build_lexical(temp)
+            lexical = index.search("red", k=1)[0]
+            with patch.object(index, "_vectors", return_value=np.ones((1, 384))) as embed:
+                found = index.search("red", method="local", k=1, candidate_k=1)
+            self.assertEqual(found[0].metadata["passage_id"], lexical.metadata["passage_id"])
+            self.assertEqual(embed.call_count, 2)  # query and one candidate only
+
+    def test_window_aggregation(self):
+        with TemporaryDirectory() as temp:
+            index = RetrievalIndex(documents())
+            index.build_lexical(temp)
+            def vectors(text, **kwargs):
+                if kwargs.get("query"):
+                    return np.asarray([[1., 0.]])
+                if text == "red cloud":
+                    return np.asarray([[0., 1.], [1., 0.]])
+                return np.asarray([[0., 1.]])
+            with patch.object(index, "_vectors", side_effect=vectors):
+                found = index.search("red", method="local", k=3)
+            self.assertEqual(found[0].metadata["passage_id"], "a")
+            self.assertEqual(len({d.metadata["passage_id"] for d in found}), 3)
+
+    def test_token_windows(self):
+        tokenizer = Tokenizer(WordLevel({"[UNK]": 0}, unk_token="[UNK]"))
+        tokenizer.pre_tokenizer = Whitespace()
+        self.assertEqual(token_windows("one two three four five", tokenizer, size=3, overlap=1),
+                         ["one two three", "three four five"])
+
+    def test_invalidation(self):
+        with TemporaryDirectory() as temp:
+            index = RetrievalIndex(documents())
+            index.build_lexical(temp)
+            changed = documents()
+            changed[0].page_content = "changed content"
+            with self.assertRaisesRegex(ValueError, "settings or corpus changed"):
+                RetrievalIndex(changed).build_lexical(temp)
+
+    def test_duplicate_ids(self):
+        values = documents()
+        values[1].metadata["passage_id"] = "a"
+        with self.assertRaisesRegex(ValueError, "unique"):
+            RetrievalIndex(values)
+
+    def test_invalid_search(self):
+        with TemporaryDirectory() as temp:
+            index = RetrievalIndex(documents())
+            index.build_lexical(temp)
+            with self.assertRaisesRegex(ValueError, "candidate_k"):
+                index.search("red", method="local", k=5, candidate_k=2)
+            with self.assertRaisesRegex(ValueError, "nonempty query"):
+                index.search("")
