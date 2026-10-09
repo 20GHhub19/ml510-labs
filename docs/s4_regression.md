@@ -181,10 +181,6 @@ $labPython = '\\?\' + (Resolve-Path .venv\Scripts\python.exe).Path
 & $labPython -m pip install -r requirements.txt
 ```
 
-## Validation status
-
-The six-notebook sequence has been executed on Windows CPU, including TensorFlow tuning and bagging. The latest review executed notebooks 00–03 from fresh kernels and passed all 91 shared-library tests, including TensorFlow checks. The unchanged 04–05 training uses the earlier validated runs. Browser workflow and other operating systems have not been validated. Detailed validation evidence is retained locally, outside the student release.
-
 ## References
 
 - [UCI Bike Sharing dataset](https://archive.ics.uci.edu/dataset/275/bike+sharing+dataset)

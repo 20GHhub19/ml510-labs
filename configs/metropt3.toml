@@ -1,0 +1,16 @@
+[experiment]
+seed = 42
+
+[data]
+path = "data/raw/metropt3/MetroPT3(AirCompressor).csv"
+
+[split]
+train = ["2020-02-01", "2020-02-22"]
+monitor = ["2020-02-22", "2020-03-01"]
+calibration = ["2020-03-01", "2020-04-01"]
+validation = ["2020-04-01", "2020-06-01"]
+test = ["2020-06-01", "2020-09-02"]
+
+[runtime]
+cpu_only = true
+deterministic = true
