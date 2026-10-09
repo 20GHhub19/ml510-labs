@@ -15,12 +15,12 @@ def main():
     args = parser.parse_args()
     root = project_root()
     if args.lab == "s6":
-        from lab_helpers.s6_unsupervised.metropt3 import load_metropt3, data_audit, prepare_data
+        from lab_helpers.s6_unsupervised.metropt3 import load_metropt3, data_audit as metropt3_audit, prepare_data
         config = load_config(root / "configs/metropt3.toml")
         path = args.path or root / config['data']['path']
         raw = load_metropt3(path)
         windows, masks, _, _ = prepare_data(raw, config)
-        report = data_audit(raw)
+        report = metropt3_audit(raw)
         report['verified_at_utc'] = datetime.now(timezone.utc).isoformat()
         report['coverage'] = windows.coverage
         report['split_counts'] = {name: int(mask.sum()) for name, mask in masks.items()}
