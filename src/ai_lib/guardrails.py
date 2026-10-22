@@ -47,8 +47,16 @@ def restricted_search(arguments, tool, *, config=None):
         raise ValueError("Construct the search tool with max_results=3.")
     # Tavily fixes the result limit at construction; supported invocation fields
     # are supplied here by the application, never forwarded from the model.
-    result = tool.invoke({"query": query, "include_domains": ["ibm.com"],
-                          "search_depth": "basic"}, config=config)
+    from langchain_core.tools import ToolException
+    try:
+        result = tool.invoke({"query": query, "include_domains": ["ibm.com"],
+                              "search_depth": "basic"}, config=config)
+    except ToolException as error:
+        # The pinned Tavily integration raises this for a successful empty search.
+        # Do not accept arbitrary error strings as evidence or relax the domains.
+        if str(error).startswith(f"No search results found for '{query}'. Suggestions:"):
+            return []
+        raise
     return search_documents(result)
 
 

@@ -31,6 +31,28 @@ class GuardrailTests(unittest.TestCase):
 
 
 class AdditionalBoundaryTests(unittest.TestCase):
+    def test_empty_search(self):
+        from langchain_core.tools import ToolException
+        tool = Mock(max_results=3)
+        tool.invoke.side_effect = ToolException(
+            "No search results found for 'IBM CLI'. Suggestions: Try modifying your search parameters.")
+        self.assertEqual(restricted_search({"query": "IBM CLI"}, tool), [])
+
+    def test_tool_failure(self):
+        from langchain_core.tools import ToolException
+        tool = Mock(max_results=3)
+        tool.invoke.side_effect = ToolException("Provider unavailable")
+        with self.assertRaises(ToolException):
+            restricted_search({"query": "IBM CLI"}, tool)
+
+    def test_native_empty_search(self):
+        from ai_lib.tools import build_web_search
+        from unittest.mock import patch
+        with patch.dict('os.environ', {'TAVILY_API_KEY': 'synthetic-key'}):
+            tool = build_web_search()
+            with patch.object(type(tool.api_wrapper), 'raw_results', return_value={'results': []}):
+                self.assertEqual(restricted_search({'query': 'IBM CLI'}, tool), [])
+
     def test_malformed_url(self):
         from ai_lib.guardrails import search_documents
         docs = search_documents({"results": [

@@ -81,6 +81,7 @@ python scripts/s8_qdrant.py import --archive path/to/s8_qdrant.zip
 Use the path where you saved the ZIP; you do not need to unzip it yourself.
 This restores the computed vectors without embedding the corpus again. Keep the
 local embedding model: it is still used to turn each question into a search vector.
+Import before the lab: writing the full local collection can take several minutes.
 
 Set `run_vector_search = True` for notebook 02's second phase, or
 `retrieval_method = "qdrant"` in notebooks 03 and 05. You can keep using BM25 plus
@@ -138,15 +139,15 @@ Every notebook prepares its own state and reuses the saved retrieval indexes.
 | 00 — Start here | Direct and instructed model calls | Change one instruction |
 | 01 — Chains | Prompt, model, parser, structured response | Add a useful response field |
 | 02 — Retrieval | BM25, embeddings, RAG chain | Investigate a query and retrieval miss |
-| 03 — Conversation | History-aware rewriting and explicit state | Verify a follow-up's interpretation |
+| 03 — Conversation | Recover the missing product, retrieve evidence, answer the original request | Apply the same steps to the Python SDK follow-up |
 | 04 — Tools | Tavily call, model-requested tool, returned evidence | Clarify when the tool should be used |
-| 05 — Graphs | State, nodes, conditional edges, execution | Improve a clarification node |
+| 05 — Graphs | State, nodes, conditional edges, execution | Continue after clarification and stop explicitly |
 
 Predict before running each check. Complete the embedded TODOs; nothing is submitted.
 In notebooks 03 and 05, set `retrieval_method = "bm25_local"` (the default) or
 `"qdrant"` in the setup cell. Choose separately in each notebook; no earlier kernel
-state is needed. Qdrant requires the completed collection from notebook 02's second
-phase. Missing or incomplete collections produce a preparation message, with no
+state is needed. Qdrant requires the completed collection imported from Moodle or
+built with the preparation command. Missing or incomplete collections produce a preparation message, with no
 silent fallback. Rerun setup after changing the choice. Each run records the method.
 Notebook 04 uses Tavily independently; in notebook 05 this setting changes only
 the local-document node. Run the closing cell before opening Qdrant in another
@@ -167,6 +168,16 @@ uses the application's own prior answers and is recorded separately. Web search
 asks about current documentation; it is a course extension, not a score against
 historical MTRAG answers. Record sources and retrieval dates, not an invented
 overall answer-quality score.
+
+Notebook 03 starts with a question about adding an image or PDF to a document.
+The conversation identifies IBM Cloudant; the search query makes that product
+explicit. Compare the retrieved evidence and both saved answers, then continue
+using the application's own answer in the message history. These are selected
+teaching examples, not a claim that rewriting always improves retrieval.
+
+Notebook 05 adds a conversation-loop exercise: ask for missing information, pass the
+user reply and history into a new graph invocation, and stop after an answer, `quit`,
+or two clarification replies. Prepared replies keep Run All non-interactive.
 
 The graph shows application logic. Timeouts, limited retries, and a step limit keep
 an exercise from running indefinitely. Systematic routing evaluation, adversarial
