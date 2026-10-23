@@ -14,5 +14,17 @@ ipykernel==6.30.1
 nbclient==0.10.2
 nbformat==5.10.4
 
+# S8: provider APIs, chains, graphs, and BM25 retrieval with local candidate embeddings.
+langchain-core==1.6.6
+langchain-google-genai==4.4.0
+langchain-groq==1.1.3
+langchain-cohere==0.6.0
+langchain-tavily==0.2.18
+langgraph==1.2.12
+fastembed==0.8.1
+qdrant-client==1.19.1
+rank-bm25==0.2.2
+python-dotenv==1.2.4
+
 # Install the local course packages in editable mode.
 -e .

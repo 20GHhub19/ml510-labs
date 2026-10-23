@@ -1,0 +1,11 @@
+{
+  "selection": "First six Cloud conversations in the pinned reference-task file, selected before generation; includes follow-ups and incomplete evidence.",
+  "teaching_conversations": [
+    "d5b1e735a040853ed361a3dfde1b8ef0",
+    "fdee20f7fd677e420742b09989623d68",
+    "be461bfeda2d4826cdb663dcaa7d1ced",
+    "1c041ce47a81941c26899fdf08bde961",
+    "1dcbbeb35d4d25ba1ffb787a9f2080e2",
+    "ddbbbe7ea13560c5768639207e1ca604"
+  ]
+}

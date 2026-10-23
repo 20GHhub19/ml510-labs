@@ -8,6 +8,10 @@ dist/
 .pytest_cache/
 .DS_Store
 .env
+.env.*
+!.env.example
+data/raw/mtrag_cloud/*
+!data/raw/mtrag_cloud/README.md
 data/raw/bike_sharing/*
 !data/raw/bike_sharing/README.md
 data/raw/bank_account_fraud/*
